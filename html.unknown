@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Interactive Quiz</title>
+<style>
+  /* Reset & base */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 600px;
+    max-width: 350px;
+    margin-left: auto;
+    margin-right: auto;
+    overflow: hidden;
+    padding: 10px;
+  }
+  #quiz-container {
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: 12px;
+    padding: 20px;
+    width: 100%;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+    height: 580px;
+  }
+  h1 {
+    text-align: center;
+    font-weight: 700;
+    margin-bottom: 8px;
+    font-size: 1.8rem;
+    letter-spacing: 1.2px;
+    user-select: none;
+  }
+  #question-number {
+    text-align: center;
+    margin-bottom: 15px;
+    font-weight: 600;
+    font-size: 1rem;
+    color: #ddd;
+  }
+  #question-text {
+    font-size: 1.3rem;
+    margin-bottom: 20px;
+    user-select: none;
+    flex-grow: 0;
+  }
+  #options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-grow: 1;
+    overflow-y: auto;
+  }
+  button.option-btn {
+    background: #3949ab;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 15px;
+    color: white;
+    font-size: 1.1rem;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.3s ease;
+    user-select: none;
+  }
+  button.option-btn:hover:not(:disabled) {
+    background: #5c6bc0;
+  }
+  button.option-btn.selected {
+    background: #ffca28;
+    color: #333;
+    font-weight: 700;
+  }
+  button.option-btn.correct {
+    background: #4caf50;
+    color: white;
+    font-weight: 700;
+  }
+  button.option-btn.wrong {
+    background: #e53935;
+    color: white;
+    font-weight: 700;
+  }
+  #navigation {
+    margin-top: 15px;
+    display: flex;
+    justify-content: space-between;
+  }
+  button.nav-btn {
+    background: #1e88e5;
+    border: none;
+    color: white;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1rem;
+    user-select: none;
+    transition: background-color 0.3s ease;
+  }
+  button.nav-btn:disabled {
+    background: #90caf9;
+    cursor: not-allowed;
+  }
+  button.nav-btn:hover:not(:disabled) {
+    background: #1565c0;
+  }
+  #result {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 15px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    user-select: none;
+  }
+  #restart-btn {
+    margin-top: 20px;
+    background: #ff6f00;
+    border: none;
+    color: white;
+    padding: 12px 30px;
+    font-weight: 700;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    user-select: none;
+    transition: background-color 0.3s ease;
+  }
+  #restart-btn:hover {
+    background: #ff8f00;
+  }
+  /* Scrollbar for options on mobile */
+  #options::-webkit-scrollbar {
+    width: 6px;
+  }
+  #options::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  #options::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.3);
+    border-radius: 3px;
+  }
+</style>
+</head>
+<body>
+  <div id="quiz-container" role="main" aria-label="Quiz Application">
+    <h1>Quiz Time!</h1>
+    <div id="question-number" aria-live="polite"></div>
+    <div id="question-text"></div>
+    <div id="options" role="list"></div>
+    <div id="navigation">
+      <button id="prev-btn" class="nav-btn" aria-label="Previous question">Previous</button>
+      <button id="next-btn" class="nav-btn" aria-label="Next question">Next</button>
+    </div>
+    <div id="result" aria-live="polite"></div>
+    <button id="restart-btn" style="display:none;">Restart Quiz</button>
+  </div>
+
+<script>
+(() => {
+  const quizData = [
+    {
+      question: "What is the capital of France?",
+      options: ["Berlin", "Madrid", "Paris", "Rome"],
+      answer: 2
+    },
+    {
+      question: "Who wrote 'Hamlet'?",
+      options: ["Charles Dickens", "William Shakespeare", "Mark Twain", "Jane Austen"],
+      answer: 1
+    },
+    {
+      question: "Which planet is known as the Red Planet?",
+      options: ["Earth", "Venus", "Mars", "Jupiter"],
+      answer: 2
+    },
+    {
+      question: "What is the smallest prime number?",
+      options: ["0", "1", "2", "3"],
+      answer: 2
+    },
+    {
+      question: "Which technology is used to style web pages?",
+      options: ["HTML", "CSS", "JavaScript", "Python"],
+      answer: 1
+    }
+  ];
+
+  const questionNumberElem = document.getElementById('question-number');
+  const questionTextElem = document.getElementById('question-text');
+  const optionsContainer = document.getElementById('options');
+  const prevBtn = document.getElementById('prev-btn');
+  const nextBtn = document.getElementById('next-btn');
+  const resultElem = document.getElementById('result');
+  const restartBtn = document.getElementById('restart-btn');
+
+  let currentQuestionIndex = 0;
+  let answers = new Array(quizData.length).fill(null);
+
+  function renderQuestion(index) {
+    const questionObj = quizData[index];
+    questionNumberElem.textContent = `Question ${index + 1} of ${quizData.length}`;
+    questionTextElem.textContent = questionObj.question;
+
+    optionsContainer.innerHTML = '';
+    questionObj.options.forEach((option, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'option-btn';
+      btn.textContent = option;
+      btn.setAttribute('role', 'listitem');
+      btn.setAttribute('aria-pressed', answers[index] === i ? "true" : "false");
+      if (answers[index] !== null && answers[index] === i) {
+        btn.classList.add('selected');
+      }
+      btn.addEventListener('click', () => {
+        if (answers[index] === null) { // allow selecting only if not selected yet
+          answers[index] = i;
+          highlightAnswers(index);
+          updateNavigationButtons();
+        }
+      });
+      optionsContainer.appendChild(btn);
+    });
+  }
+
+  function highlightAnswers(index) {
+    const buttons = optionsContainer.querySelectorAll('button');
+    buttons.forEach((btn, i) => {
+      btn.disabled = true; // disable all buttons once answered
+      btn.setAttribute('aria-pressed', 'false');
+      btn.classList.remove('selected', 'correct', 'wrong');
+      if (i === quizData[index].answer) {
+        btn.classList.add('correct');
+        btn.setAttribute('aria-pressed', 'true');
+      }
+      if (answers[index] === i && answers[index] !== quizData[index].answer) {
+        btn.classList.add('wrong');
+        btn.setAttribute('aria-pressed', 'true');
+      }
+    });
+  }
+
+  function updateNavigationButtons() {
+    prevBtn.disabled = currentQuestionIndex === 0;
+    // Next enabled only if answered current question, or if at last question when quiz ended
+    nextBtn.disabled = answers[currentQuestionIndex] === null;
+  }
+
+  function showResult() {
+    const correctCount = answers.reduce((acc, ans, i) => {
+      return acc + (ans === quizData[i].answer ? 1 : 0);
+    }, 0);
+    questionNumberElem.style.display = 'none';
+    questionTextElem.style.display = 'none';
+    optionsContainer.style.display = 'none';
+    prevBtn.style.display = 'none';
+    nextBtn.style.display = 'none';
+
+    resultElem.style.display = 'flex';
+    resultElem.textContent = `You scored ${correctCount} out of ${quizData.length}!`;
+
+    restartBtn.style.display = 'block';
+  }
+
+  prevBtn.addEventListener('click', () => {
+    if (currentQuestionIndex > 0) {
+      currentQuestionIndex--;
+      resetUIForQuestion();
+      renderQuestion(currentQuestionIndex);
+      updateNavigationButtons();
+    }
+  });
+
+  nextBtn.addEventListener('click', () => {
+    if (answers[currentQuestionIndex] === null) return;
+    if (currentQuestionIndex < quizData.length - 1) {
+      currentQuestionIndex++;
+      resetUIForQuestion();
+      renderQuestion(currentQuestionIndex);
+      updateNavigationButtons();
+    } else {
+      // End of quiz
+      showResult();
+    }
+  });
+
+  restartBtn.addEventListener('click', () => {
+    currentQuestionIndex = 0;
+    answers.fill(null);
+    questionNumberElem.style.display = 'block';
+    questionTextElem.style.display = 'block';
+    optionsContainer.style.display = 'flex';
+    prevBtn.style.display = 'inline-block';
+    nextBtn.style.display = 'inline-block';
+    resultElem.style.display = 'none';
+    restartBtn.style.display = 'none';
+    resetUIForQuestion();
+    renderQuestion(currentQuestionIndex);
+    updateNavigationButtons();
+  });
+
+  function resetUIForQuestion() {
+    // Remove any disabled or color states so user can select option if not yet answered
+    const buttons = optionsContainer.querySelectorAll('button.option-btn');
+    buttons.forEach(btn => {
+      btn.disabled = false;
+      btn.classList.remove('selected', 'correct', 'wrong');
+      btn.setAttribute('aria-pressed', 'false');
+    });
+  }
+
+  // Initialize quiz
+  renderQuestion(currentQuestionIndex);
+  updateNavigationButtons();
+})();
+</script>
+</body>
+</html>
